@@ -1,0 +1,65 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+# Gradle files
+.gradle/
+build/
+**/build/
+
+# Local configuration (machine-specific)
+local.properties
+
+# IntelliJ / Android Studio settings
+.idea/
+*.iml
+
+# Generated files
+captures/
+externalNativeBuild/
+.gradle/
+*.apk
+*.ap_
+output.json
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Transient
+.cache/
+!.gitignore
+
+# Android specific
+*.keystore
+*.jks
+*.pro
+
+# Kotlin build cache
+.kotlinc/
+
+# NDK
+obj/
+
+# JetBrains caches
+**/out/
+
+# Misc
+*.tmp
+
+# Avoid committing release keys accidentally
+signing/
