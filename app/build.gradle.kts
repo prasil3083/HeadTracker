@@ -70,9 +70,9 @@ dependencies {
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
-    implementation("androidx.camera:camera-extensions:$cameraxVersion")
     implementation("androidx.camera:camera-video:$cameraxVersion")
     implementation("androidx.camera:camera-mlkit-vision:$cameraxVersion")
+    implementation("androidx.camera:camera-extensions:${cameraxVersion}")
 
     // ---------- ML Kit Face Detection ----------
     implementation(platform("com.google.firebase:firebase-bom:32.0.0"))
@@ -84,8 +84,9 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.3.2")
     implementation("androidx.camera:camera-lifecycle:1.3.2")
     implementation("androidx.camera:camera-view:1.3.2")
-    implementation("androidx.camera:camera-mlkit-vision:1.3.2")
+    //implementation("androidx.camera:camera-mlkit-vision:1.3.2")
     implementation("androidx.camera:camera-video:1.3.2")
+    implementation("androidx.camera:camera-mlkit-vision:1.4.0-alpha04")
 
 
 }
