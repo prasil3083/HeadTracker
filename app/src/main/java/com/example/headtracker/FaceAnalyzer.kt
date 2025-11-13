@@ -1,32 +1,32 @@
 package com.example.headtracker
 
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 
 class FaceAnalyzer(
-    private val onFacePosition: (Float, Float) -> Unit
+    private val listener: (x: Float, y: Float, imageWidth: Int, imageHeight: Int, rotation: Int) -> Unit
 ) : ImageAnalysis.Analyzer {
 
-    private val options = FaceDetectorOptions.Builder()
+    companion object {
+        private const val TAG = "FaceAnalyzer"
+    }
+
+    // Configure ML Kit face detector for fast performance
+    private val detectorOptions = FaceDetectorOptions.Builder()
         .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
         .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
         .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
-        .enableTracking()
+        .setMinFaceSize(0.15f) // Minimum face size relative to image
         .build()
 
-    private val detector = FaceDetection.getClient(options)
+    private val detector = FaceDetection.getClient(detectorOptions)
 
-    // CHANGE THIS NUMBER (0-7) TO TEST DIFFERENT COORDINATE MAPPINGS
-    // Try each number from 0 to 7 until the dot aligns with your face
-    private val COORDINATE_MODE = 7
-
-    @androidx.camera.core.ExperimentalGetImage
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
@@ -35,81 +35,45 @@ class FaceAnalyzer(
             return
         }
 
-        val rotation = imageProxy.imageInfo.rotationDegrees
-        val image = InputImage.fromMediaImage(mediaImage, rotation)
+        // Create InputImage from camera frame
+        val inputImage = InputImage.fromMediaImage(
+            mediaImage,
+            imageProxy.imageInfo.rotationDegrees
+        )
 
-        detector.process(image)
-            .addOnSuccessListener { faces: List<Face> ->
+        // Process the image for face detection
+        detector.process(inputImage)
+            .addOnSuccessListener { faces ->
                 if (faces.isNotEmpty()) {
+                    // Get the first detected face
                     val face = faces[0]
-                    val bbox = face.boundingBox
+                    val boundingBox = face.boundingBox
 
-                    // Image dimensions
-                    val imgW = mediaImage.width.toFloat()
-                    val imgH = mediaImage.height.toFloat()
+                    // Calculate center of the face
+                    val centerX = boundingBox.centerX().toFloat()
+                    val centerY = boundingBox.centerY().toFloat()
 
-                    // Raw coordinates (center of face)
-                    val rawX = bbox.centerX().toFloat()
-                    val rawY = bbox.centerY().toFloat()
+                    // Pass coordinates along with image dimensions and rotation
+                    listener(
+                        centerX,
+                        centerY,
+                        inputImage.width,
+                        inputImage.height,
+                        imageProxy.imageInfo.rotationDegrees
+                    )
 
-                    // Apply coordinate transformation based on mode
-                    val (normX, normY) = when (COORDINATE_MODE) {
-                        0 -> {
-                            // Mode 0: Direct mapping
-                            Pair(rawX / imgW, rawY / imgH)
-                        }
-                        1 -> {
-                            // Mode 1: Mirror X
-                            Pair(1f - (rawX / imgW), rawY / imgH)
-                        }
-                        2 -> {
-                            // Mode 2: Mirror Y
-                            Pair(rawX / imgW, 1f - (rawY / imgH))
-                        }
-                        3 -> {
-                            // Mode 3: Mirror both
-                            Pair(1f - (rawX / imgW), 1f - (rawY / imgH))
-                        }
-                        4 -> {
-                            // Mode 4: Swap X↔Y
-                            Pair(rawY / imgH, rawX / imgW)
-                        }
-                        5 -> {
-                            // Mode 5: Swap X↔Y, Mirror X
-                            Pair(1f - (rawY / imgH), rawX / imgW)
-                        }
-                        6 -> {
-                            // Mode 6: Swap X↔Y, Mirror Y
-                            Pair(rawY / imgH, 1f - (rawX / imgW))
-                        }
-                        7 -> {
-                            // Mode 7: Swap X↔Y, Mirror both
-                            Pair(1f - (rawY / imgH), 1f - (rawX / imgW))
-                        }
-                        else -> Pair(rawX / imgW, rawY / imgH)
-                    }
-
-                    // Clamp values
-                    val finalX = normX.coerceIn(0f, 1f)
-                    val finalY = normY.coerceIn(0f, 1f)
-
-                    Log.d("FaceAnalyzer", "Mode=$COORDINATE_MODE | Rot=$rotation° | Raw=(${rawX.toInt()},${rawY.toInt()}) | Norm=(${"%.2f".format(finalX)},${"%.2f".format(finalY)})")
-
-                    onFacePosition(finalX, finalY)
+                    Log.d(TAG, "Face detected at ($centerX, $centerY) - Size: ${inputImage.width}x${inputImage.height}, Rotation: ${imageProxy.imageInfo.rotationDegrees}")
                 } else {
-                    onFacePosition(-1f, -1f)
+                    // No face detected - hide the dot
+                    listener(-1f, -1f, inputImage.width, inputImage.height, imageProxy.imageInfo.rotationDegrees)
                 }
             }
             .addOnFailureListener { e ->
-                Log.e("FaceAnalyzer", "Face detection failed", e)
-                onFacePosition(-1f, -1f)
+                Log.e(TAG, "Face detection failed", e)
             }
             .addOnCompleteListener {
+                // Always close the image proxy to prevent blocking the pipeline
                 imageProxy.close()
             }
-    }
-
-    fun stop() {
-        detector.close()
     }
 }
